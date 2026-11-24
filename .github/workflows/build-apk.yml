@@ -1,10 +1,10 @@
 name: Build Kisan Tubewell APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,47 +14,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools'
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK
         run: |
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Extract project
-        run: |
-          mkdir -p project
-          unzip -q Kisan_Tubewell_GitHub_APK_Build.zip -d project
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
-      - name: Find Gradle project
+      - name: Extract Project
         run: |
-          GRADLEW=$(find project -type f -name gradlew | head -n 1)
-          if [ -z "$GRADLEW" ]; then
-            echo "Gradle wrapper not found"
-            exit 1
-          fi
-          echo "PROJECT_DIR=$(dirname "$GRADLEW")" >> $GITHUB_ENV
+          unzip -q Kisan_Tubewell_GitHub_APK_Build.zip -d project
 
       - name: Build APK
         run: |
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          cd project/KisanTubewellAndroidProject
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Kisan-Tubewell-APK
-          path: project/**/build/outputs/apk/debug/*.apk
+          path: project/KisanTubewellAndroidProject/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
