@@ -2,8 +2,12 @@ name: Build Kisan Tubewell APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -20,31 +24,37 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
-      - name: Install SDK packages
+      - name: Install Android SDK packages
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
       - name: Extract project
         run: |
-          mkdir -p extracted
-          unzip -q Kisan_Tubewell_GitHub_APK_Build.zip -d extracted
+          mkdir -p project
+          unzip -q Kisan_Tubewell_GitHub_APK_Build.zip -d project
 
-      - name: Build APK
+      - name: Find Gradle project
         run: |
-          GRADLEW=$(find extracted -name gradlew -type f | head -n 1)
+          GRADLEW=$(find project -type f -name gradlew | head -n 1)
           if [ -z "$GRADLEW" ]; then
             echo "Gradle wrapper not found"
             exit 1
           fi
-          cd "$(dirname "$GRADLEW")"
+          echo "PROJECT_DIR=$(dirname "$GRADLEW")" >> $GITHUB_ENV
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Kisan-Tubewell-APK
-          path: extracted/**/build/outputs/apk/debug/*.apk
+          path: project/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
